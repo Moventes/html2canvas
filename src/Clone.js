@@ -1,15 +1,30 @@
 /* @flow */
 'use strict';
-import type {Bounds} from './Bounds';
-import type {Options} from './index';
-import type {PseudoContentData, PseudoContentItem} from './PseudoNodeContent';
+import type {
+    Bounds
+} from './Bounds';
+import type {
+    Options
+} from './index';
+import type {
+    PseudoContentData,
+    PseudoContentItem
+} from './PseudoNodeContent';
 import type Logger from './Logger';
 
-import {parseBounds} from './Bounds';
-import {Proxy} from './Proxy';
+import {
+    parseBounds
+} from './Bounds';
+import {
+    Proxy
+} from './Proxy';
 import ResourceLoader from './ResourceLoader';
-import {copyCSSStyles} from './Util';
-import {parseBackgroundImage} from './parsing/background';
+import {
+    copyCSSStyles
+} from './Util';
+import {
+    parseBackgroundImage
+} from './parsing/background';
 import CanvasRenderer from './renderer/CanvasRenderer';
 import {
     parseCounterReset,
@@ -21,7 +36,7 @@ import {
 const IGNORE_ATTRIBUTE = 'data-html2canvas-ignore';
 
 export class DocumentCloner {
-    scrolledElements: Array<[HTMLElement, number, number]>;
+    scrolledElements: Array < [HTMLElement, number, number] > ;
     referenceElement: HTMLElement;
     clonedReferenceElement: HTMLElement;
     documentElement: HTMLElement;
@@ -30,7 +45,7 @@ export class DocumentCloner {
     options: Options;
     inlineImages: boolean;
     copyStyles: boolean;
-    renderer: (element: HTMLElement, options: Options, logger: Logger) => Promise<*>;
+    renderer: (element: HTMLElement, options: Options, logger: Logger) => Promise < * > ;
     pseudoContentData: PseudoContentData;
 
     constructor(
@@ -38,7 +53,7 @@ export class DocumentCloner {
         options: Options,
         logger: Logger,
         copyInline: boolean,
-        renderer: (element: HTMLElement, options: Options, logger: Logger) => Promise<*>
+        renderer: (element: HTMLElement, options: Options, logger: Logger) => Promise < * >
     ) {
         this.referenceElement = element;
         this.scrolledElements = [];
@@ -56,7 +71,7 @@ export class DocumentCloner {
         this.documentElement = this.cloneNode(element.ownerDocument.documentElement);
     }
 
-    inlineAllImages(node: ?HTMLElement) {
+    inlineAllImages(node: ? HTMLElement) {
         if (this.inlineImages && node) {
             const style = node.style;
             Promise.all(
@@ -66,9 +81,9 @@ export class DocumentCloner {
                             .inlineImage(backgroundImage.args[0])
                             .then(
                                 img =>
-                                    img && typeof img.src === 'string'
-                                        ? `url("${img.src}")`
-                                        : 'none'
+                                img && typeof img.src === 'string' ?
+                                `url("${img.src}")` :
+                                'none'
                             )
                             .catch(e => {
                                 if (__DEV__) {
@@ -109,46 +124,46 @@ export class DocumentCloner {
         }
     }
 
-    inlineFonts(document: Document): Promise<void> {
+    inlineFonts(document: Document): Promise < void > {
         return Promise.all(
-            Array.from(document.styleSheets).map(sheet => {
-                if (sheet.href) {
-                    return fetch(sheet.href)
-                        .then(res => res.text())
-                        .then(text => createStyleSheetFontsFromText(text, sheet.href))
-                        .catch(e => {
-                            if (__DEV__) {
-                                this.logger.log(`Unable to load stylesheet`, e);
-                            }
-                            return [];
-                        });
-                }
-                return getSheetFonts(sheet, document);
-            })
-        )
+                Array.from(document.styleSheets).map(sheet => {
+                    if (sheet.href) {
+                        return fetch(sheet.href)
+                            .then(res => res.text())
+                            .then(text => createStyleSheetFontsFromText(text, sheet.href))
+                            .catch(e => {
+                                if (__DEV__) {
+                                    this.logger.log(`Unable to load stylesheet`, e);
+                                }
+                                return [];
+                            });
+                    }
+                    return getSheetFonts(sheet, document);
+                })
+            )
             .then(fonts => fonts.reduce((acc, font) => acc.concat(font), []))
             .then(fonts =>
                 Promise.all(
                     fonts.map(font =>
                         fetch(font.formats[0].src)
-                            .then(response => response.blob())
-                            .then(
-                                blob =>
-                                    new Promise((resolve, reject) => {
-                                        const reader = new FileReader();
-                                        reader.onerror = reject;
-                                        reader.onload = () => {
-                                            // $FlowFixMe
-                                            const result: string = reader.result;
-                                            resolve(result);
-                                        };
-                                        reader.readAsDataURL(blob);
-                                    })
-                            )
-                            .then(dataUri => {
-                                font.fontFace.setProperty('src', `url("${dataUri}")`);
-                                return `@font-face {${font.fontFace.cssText} `;
+                        .then(response => response.blob())
+                        .then(
+                            blob =>
+                            new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onerror = reject;
+                                reader.onload = () => {
+                                    // $FlowFixMe
+                                    const result: string = reader.result;
+                                    resolve(result);
+                                };
+                                reader.readAsDataURL(blob);
                             })
+                        )
+                        .then(dataUri => {
+                            font.fontFace.setProperty('src', `url("${dataUri}")`);
+                            return `@font-face {${font.fontFace.cssText} `;
+                        })
                     )
                 )
             )
@@ -177,13 +192,15 @@ export class DocumentCloner {
             const iframeKey = generateIframeKey();
             tempIframe.setAttribute('data-html2canvas-internal-iframe-key', iframeKey);
 
-            const {width, height} = parseBounds(node, 0, 0);
+            const {
+                width,
+                height
+            } = parseBounds(node, 0, 0);
 
             this.resourceLoader.cache[iframeKey] = getIframeDocumentElement(node, this.options)
                 .then(documentElement => {
                     return this.renderer(
-                        documentElement,
-                        {
+                        documentElement, {
                             async: this.options.async,
                             allowTaint: this.options.allowTaint,
                             backgroundColor: '#ffffff',
@@ -210,22 +227,24 @@ export class DocumentCloner {
                 })
                 .then(
                     canvas =>
-                        new Promise((resolve, reject) => {
-                            const iframeCanvas = document.createElement('img');
-                            iframeCanvas.onload = () => resolve(canvas);
-                            iframeCanvas.onerror = reject;
-                            iframeCanvas.src = canvas.toDataURL();
-                            if (tempIframe.parentNode) {
-                                tempIframe.parentNode.replaceChild(
-                                    copyCSSStyles(
-                                        node.ownerDocument.defaultView.getComputedStyle(node),
-                                        iframeCanvas
-                                    ),
-                                    tempIframe
-                                );
-                            }
-                        })
-                );
+                    new Promise((resolve, reject) => {
+                        const iframeCanvas = document.createElement('img');
+                        iframeCanvas.onload = () => resolve(canvas);
+                        iframeCanvas.onerror = reject;
+                        iframeCanvas.src = canvas.toDataURL();
+                        if (tempIframe.parentNode) {
+                            tempIframe.parentNode.replaceChild(
+                                copyCSSStyles(
+                                    node.ownerDocument.defaultView.getComputedStyle(node),
+                                    iframeCanvas
+                                ),
+                                tempIframe
+                            );
+                        }
+                    })
+                ).catch(() => {
+                    // zone js
+                });
             return tempIframe;
         }
 
@@ -251,9 +270,9 @@ export class DocumentCloner {
 
     cloneNode(node: Node): Node {
         const clone =
-            node.nodeType === Node.TEXT_NODE
-                ? document.createTextNode(node.nodeValue)
-                : this.createElementClone(node);
+            node.nodeType === Node.TEXT_NODE ?
+            document.createTextNode(node.nodeValue) :
+            this.createElementClone(node);
 
         const window = node.ownerDocument.defaultView;
         const style = node instanceof window.HTMLElement ? window.getComputedStyle(node) : null;
@@ -332,11 +351,11 @@ type Font = {
 };
 
 type FontFamily = {
-    formats: Array<Font>,
+    formats: Array < Font > ,
     fontFace: CSSStyleDeclaration
 };
 
-const getSheetFonts = (sheet: StyleSheet, document: Document): Array<FontFamily> => {
+const getSheetFonts = (sheet: StyleSheet, document: Document): Array < FontFamily > => {
     // $FlowFixMe
     return (sheet.cssRules ? Array.from(sheet.cssRules) : [])
         .filter(rule => rule.type === CSSRule.FONT_FACE_RULE)
@@ -369,7 +388,7 @@ const getSheetFonts = (sheet: StyleSheet, document: Document): Array<FontFamily>
         .filter(font => font.formats.length);
 };
 
-const createStyleSheetFontsFromText = (text: string, baseHref: string): Array<FontFamily> => {
+const createStyleSheetFontsFromText = (text: string, baseHref: string): Array < FontFamily > => {
     const doc = document.implementation.createHTMLDocument('');
     const base = document.createElement('base');
     // $FlowFixMe
@@ -416,9 +435,9 @@ const inlinePseudoElement = (
     node: HTMLElement,
     clone: HTMLElement,
     style: CSSStyleDeclaration,
-    contentItems: ?Array<PseudoContentItem>,
-    pseudoElt: ':before' | ':after'
-): ?HTMLElement => {
+    contentItems: ? Array < PseudoContentItem > ,
+    pseudoElt : ':before' | ':after'
+): ? HTMLElement => {
     if (
         !style ||
         !style.content ||
@@ -454,9 +473,9 @@ const inlinePseudoElement = (
 
     anonymousReplacedElement.className = `${PSEUDO_HIDE_ELEMENT_CLASS_BEFORE} ${PSEUDO_HIDE_ELEMENT_CLASS_AFTER}`;
     clone.className +=
-        pseudoElt === PSEUDO_BEFORE
-            ? ` ${PSEUDO_HIDE_ELEMENT_CLASS_BEFORE}`
-            : ` ${PSEUDO_HIDE_ELEMENT_CLASS_AFTER}`;
+        pseudoElt === PSEUDO_BEFORE ?
+        ` ${PSEUDO_HIDE_ELEMENT_CLASS_BEFORE}` :
+        ` ${PSEUDO_HIDE_ELEMENT_CLASS_AFTER}`;
     if (pseudoElt === PSEUDO_BEFORE) {
         clone.insertBefore(anonymousReplacedElement, clone.firstChild);
     } else {
@@ -504,48 +523,48 @@ const DATA_URI_REGEXP = /^data:text\/(.+);(base64)?,(.*)$/i;
 const getIframeDocumentElement = (
     node: HTMLIFrameElement,
     options: Options
-): Promise<HTMLElement> => {
+): Promise < HTMLElement > => {
     try {
         return Promise.resolve(node.contentWindow.document.documentElement);
     } catch (e) {
-        return options.proxy
-            ? Proxy(node.src, options)
-                  .then(html => {
-                      const match = html.match(DATA_URI_REGEXP);
-                      if (!match) {
-                          return Promise.reject();
-                      }
+        return options.proxy ?
+            Proxy(node.src, options)
+            .then(html => {
+                const match = html.match(DATA_URI_REGEXP);
+                if (!match) {
+                    return Promise.reject();
+                }
 
-                      return match[2] === 'base64'
-                          ? window.atob(decodeURIComponent(match[3]))
-                          : decodeURIComponent(match[3]);
-                  })
-                  .then(html =>
-                      createIframeContainer(
-                          node.ownerDocument,
-                          parseBounds(node, 0, 0)
-                      ).then(cloneIframeContainer => {
-                          const cloneWindow = cloneIframeContainer.contentWindow;
-                          const documentClone = cloneWindow.document;
+                return match[2] === 'base64' ?
+                    window.atob(decodeURIComponent(match[3])) :
+                    decodeURIComponent(match[3]);
+            })
+            .then(html =>
+                createIframeContainer(
+                    node.ownerDocument,
+                    parseBounds(node, 0, 0)
+                ).then(cloneIframeContainer => {
+                    const cloneWindow = cloneIframeContainer.contentWindow;
+                    const documentClone = cloneWindow.document;
 
-                          documentClone.open();
-                          documentClone.write(html);
-                          const iframeLoad = iframeLoader(cloneIframeContainer).then(
-                              () => documentClone.documentElement
-                          );
+                    documentClone.open();
+                    documentClone.write(html);
+                    const iframeLoad = iframeLoader(cloneIframeContainer).then(
+                        () => documentClone.documentElement
+                    );
 
-                          documentClone.close();
-                          return iframeLoad;
-                      })
-                  )
-            : Promise.reject();
+                    documentClone.close();
+                    return iframeLoad;
+                })
+            ) :
+            Promise.reject();
     }
 };
 
 const createIframeContainer = (
     ownerDocument: Document,
     bounds: Bounds
-): Promise<HTMLIFrameElement> => {
+): Promise < HTMLIFrameElement > => {
     const cloneIframeContainer = ownerDocument.createElement('iframe');
 
     cloneIframeContainer.className = 'html2canvas-container';
@@ -569,7 +588,7 @@ const createIframeContainer = (
     return Promise.resolve(cloneIframeContainer);
 };
 
-const iframeLoader = (cloneIframeContainer: HTMLIFrameElement): Promise<HTMLIFrameElement> => {
+const iframeLoader = (cloneIframeContainer: HTMLIFrameElement): Promise < HTMLIFrameElement > => {
     const cloneWindow = cloneIframeContainer.contentWindow;
     const documentClone = cloneWindow.document;
 
@@ -594,8 +613,8 @@ export const cloneWindow = (
     referenceElement: HTMLElement,
     options: Options,
     logger: Logger,
-    renderer: (element: HTMLElement, options: Options, logger: Logger) => Promise<*>
-): Promise<[HTMLIFrameElement, HTMLElement, ResourceLoader]> => {
+    renderer: (element: HTMLElement, options: Options, logger: Logger) => Promise < * >
+): Promise < [HTMLIFrameElement, HTMLElement, ResourceLoader] > => {
     const cloner = new DocumentCloner(referenceElement, options, logger, false, renderer);
     const scrollX = ownerDocument.defaultView.pageXOffset;
     const scrollY = ownerDocument.defaultView.pageYOffset;
@@ -629,16 +648,16 @@ export const cloneWindow = (
             const onclone = options.onclone;
 
             return cloner.clonedReferenceElement instanceof cloneWindow.HTMLElement ||
-            cloner.clonedReferenceElement instanceof ownerDocument.defaultView.HTMLElement ||
-            cloner.clonedReferenceElement instanceof HTMLElement
-                ? typeof onclone === 'function'
-                  ? Promise.resolve().then(() => onclone(documentClone)).then(() => result)
-                  : result
-                : Promise.reject(
-                      __DEV__
-                          ? `Error finding the ${referenceElement.nodeName} in the cloned document`
-                          : ''
-                  );
+                cloner.clonedReferenceElement instanceof ownerDocument.defaultView.HTMLElement ||
+                cloner.clonedReferenceElement instanceof HTMLElement ?
+                typeof onclone === 'function' ?
+                Promise.resolve().then(() => onclone(documentClone)).then(() => result) :
+                result :
+                Promise.reject(
+                    __DEV__ ?
+                    `Error finding the ${referenceElement.nodeName} in the cloned document` :
+                    ''
+                );
         });
 
         documentClone.open();
@@ -655,7 +674,7 @@ export const cloneWindow = (
     });
 };
 
-const serializeDoctype = (doctype: ?DocumentType): string => {
+const serializeDoctype = (doctype: ? DocumentType): string => {
     let str = '';
     if (doctype) {
         str += '<!DOCTYPE ';
